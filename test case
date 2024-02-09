@@ -1,0 +1,139 @@
+CREATE OR REPLACE PROCEDURE META_CONTROL_DB.META.GENERATE_TESTCASE_STAGE()
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+'
+# ==========================================================================================
+# Author:         saravana pandi
+# Create date:    25/12/2023
+# Description:    This procedure dynamically generates test cases with the assistance of a metadata table.
+# ===========================================================================================
+# ===========================================================================================
+# Change History
+# Date                      User                            Change               
+# 08/03/2022             Mithun Krishnappa               Initial version
+# ===========================================================================================
+declare 
+    schema_details_list resultset default( select distinct(schemaname),databasename from META_CONTROL_DB.META.COLUMNINFORMATION order by schemaname desc );
+    metadata_table resultset;
+    schema_name_cursor cursor for schema_details_list;
+    database_struct_part varchar;
+    database_schema_change_copy varchar;
+    testcase_full_structure varchar;
+    schema_struct_part varchar;
+    testcase_tablename_Structs varchar;
+    part_var_2_copy varchar := '''';
+    part_var_3_copy varchar := '''';
+    testcase_tablecolumn_count_Structs varchar;
+    testcase_tablecolumn_contain_Structs varchar;
+    testcase_table_individually_column_Structs varchar;
+    part_var_6_copy varchar;
+    testcase_column_null_check_Structs varchar;
+    testcase_column_type_Structs varchar ;
+    column_type varchar;
+    database_name varchar;
+    column_name_array VARIANT;
+    column_name varchar;
+    column_count int;
+    schema_name varchar;
+    table_name_variable varchar;
+BEGIN
+    testcase_full_structure :=(''version: 2\\n'' || ''sources:\\n'');
+    for schema_name_for in schema_name_cursor do
+      set schema_name := schema_name_for.schemaname;
+      set database_name :=  schema_name_for.databasename;
+      
+      
+      set database_struct_part := ''  - name: '' || :schema_name || ''_test\\n'' ||
+                                    ''    description: testcase for intermediate database\\n'' ||                     
+                                    ''    database: '' || :database_name || ''\\n'';
+                                    
+      set schema_struct_part := ''    schema: ''|| :schema_name || ''\\n'' ||
+                        ''    tables:\\n'';
+       metadata_table :=(select distinct(tablename) from META_CONTROL_DB.META.COLUMNINFORMATION where schemaname=:schema_name and ACTION=''I'' );
+      let table_name_in_metadataTable cursor for metadata_table;
+      SET part_var_3_copy := '''';
+         for table_name in table_name_in_metadataTable do 
+            
+            set table_name_variable := table_name.tablename;
+            ------------------------------------------------------------------------------------------------------------------
+            set column_count := (select ARRAY_SIZE(array_agg(columnname)) from META_CONTROL_DB.META.COLUMNINFORMATION where 
+                            schemaname=:schema_name and tablename= :table_name_variable);
+            select array_agg(columnname) into :column_name_array from META_CONTROL_DB.META.COLUMNINFORMATION where 
+                            schemaname=:schema_name and tablename= :table_name_variable;
+            -------------------------------------------------------------------------------------------------------------------
+            set testcase_tablename_Structs := ''      - name: '' || :table_name_variable || ''\\n'' ||
+                              ''        description: table_test\\n'' || 
+                              ''        tests:\\n'';
+            set testcase_tablecolumn_count_Structs := ''          - dbt_expectations.expect_table_column_count_to_equal:\\n'' ||
+                              ''              value: '' || :column_count || ''\\n'';
+            set testcase_tablecolumn_contain_Structs := ''          - dbt_expectations.expect_table_columns_to_contain_set:\\n'' || 
+                              ''              column_list: '' || :column_name_array || ''\\n'' ||  
+                              ''        columns:\\n'';
+            set part_var_6_copy :='''';
+            ---------------------------------------------------------------------------------------------------------------------
+            for columncount_iteration in 1 to column_count do 
+            select GET(:column_name_array,:columncount_iteration-1) into :column_name; 
+            set testcase_table_individually_column_Structs := ''          - name: ''||:column_name|| ''\\n'' ||
+                              ''            description: column_test\\n'' || 
+                              ''            tests:\\n'';
+            if(exists(select 1 from META_CONTROL_DB.META.COLUMNINFORMATION where ISNULLABLE =''NO'' and schemaname=:schema_name and tablename= :table_name_variable and COLUMNNAME= :column_name )) then 
+            begin
+            set testcase_column_null_check_Structs :=''              - not_null\\n'';
+            set part_var_6_copy := part_var_6_copy||testcase_table_individually_column_Structs||testcase_column_null_check_Structs;
+            end;
+            else
+            begin 
+            set part_var_6_copy := part_var_6_copy||testcase_table_individually_column_Structs;
+            end;
+
+            
+            end if;
+            --column type test case----------------------------------
+            if(exists(select 1 from META_CONTROL_DB.META.COLUMNINFORMATION where schemaname=:schema_name and tablename= :table_name_variable and COLUMNNAME= :column_name  and datatype in (''xml'',''geography'',''uniqueidentifier'',''hierarchyid'',''image'',''nvarchar'',''ntext'',''nchar'',''varchar'',''char'',''text'')))then 
+           begin 
+            set   column_type:=''varchar'';
+            set  testcase_column_type_Structs:=(''              - dbt_expectations.expect_column_values_to_be_of_type:\\n'' || 
+                              ''                  column_type: ''|| :column_type || ''\\n''); 
+                  set part_var_6_copy := part_var_6_copy||testcase_column_type_Structs;
+            end;
+            ELSEIF(exists(select 1 from META_CONTROL_DB.META.COLUMNINFORMATION where schemaname=:schema_name and tablename= :table_name_variable and COLUMNNAME= :column_name  and  datatype in (''bigint'',''decimal'',''int'',''money'',''image'',''numeric'',''smallint'',''smallmoney'',''tinyint'')))then
+            begin 
+            set   column_type:=''number'';
+            set   testcase_column_type_Structs:=(''              - dbt_expectations.expect_column_values_to_be_of_type:\\n'' || 
+                               ''                  column_type: ''|| :column_type || ''\\n''); 
+                  set part_var_6_copy := part_var_6_copy||testcase_column_type_Structs;
+            end;
+        
+             ELSEIF(exists(select 1 from META_CONTROL_DB.META.COLUMNINFORMATION where schemaname=:schema_name and tablename= :table_name_variable  and COLUMNNAME= :column_name  and  datatype in (''float'')))then
+            begin 
+            set   column_type:=''float'';
+            set   testcase_column_type_Structs:=(''              - dbt_expectations.expect_column_values_to_be_of_type:
+'' || 
+                               ''                  column_type: ''|| :column_type || ''
+''); 
+                  set part_var_6_copy := part_var_6_copy||testcase_column_type_Structs;
+            end;
+            ELSEIF(exists(select 1 from META_CONTROL_DB.META.COLUMNINFORMATION where schemaname=:schema_name and tablename= :table_name_variable  and COLUMNNAME= :column_name  and  datatype in (''date'')))then
+            begin 
+            set   column_type:=''date'';
+            set   testcase_column_type_Structs:=(''              - dbt_expectations.expect_column_values_to_be_of_type:
+'' || 
+                               ''                  column_type: ''|| :column_type || ''
+''); 
+                  set part_var_6_copy := part_var_6_copy||testcase_column_type_Structs;
+            end;
+            
+            
+            end if ;            
+            end for;
+            set part_var_3_copy := part_var_3_copy || testcase_tablename_Structs || testcase_tablecolumn_count_Structs|| testcase_tablecolumn_contain_Structs||part_var_6_copy;
+         end for;
+      set part_var_2_copy := database_struct_part || schema_struct_part;
+      set part_var_2_copy := part_var_2_copy || part_var_3_copy;
+  
+     testcase_full_structure := testcase_full_structure ||part_var_2_copy;
+    end for;
+    return testcase_full_structure;  
+end';
