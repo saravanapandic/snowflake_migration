@@ -1,4 +1,4 @@
-name: Python Project
+name: snowflake_migration
 
 on: 
   push:
