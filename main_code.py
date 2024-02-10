@@ -68,7 +68,7 @@ try:
     # tcp.table_crt_list(database_in_source,target_account_details)
     print("process is completed")
 except  Exception as error:
-        print ("error on main file of process")
+        print ("error on main file of process ")
         print(error)
 
 
