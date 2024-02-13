@@ -15,7 +15,7 @@ def schema_table_join_Db(db_sc_tb_list,Target_SF_account,source_Sf_account):
         table_Ddl=pd.DataFrame(list_table_ddl)
         Qit.executed_in_target_sf_table_create(Target_SF_account,table_Ddl.iloc[0][0],db_sc_tb_list.iloc[db_sc_list_count][0],db_sc_tb_list.iloc[db_sc_list_count][1])
         print('table:'+ db_sc_tb_list.iloc[db_sc_list_count][2]+' on database: '+ db_sc_tb_list.iloc[db_sc_list_count][0] +' on schema: '+ db_sc_tb_list.iloc[db_sc_list_count][1])
-    print("all table is create successfully-----------------------------------------------------------------------------------------------------------------------")
+    print("---------------------------------------all table is create successfully-------------------------------------------------------------------------")
 
 
 
@@ -43,7 +43,7 @@ def table_insert_fun(table_schema_database_details,Target_SF_Account,Source_SF_A
     try:
         connection_source= conn_sf.connected_sf(Source_SF_Account)
         lists=[]
-        
+        print("------------------- table value inserting process is going ----------------------------------------------------------------------")
         for db_sc_list_count in range(len(table_schema_database_details)):
             connection_source.execute("select * from " + table_schema_database_details.iloc[db_sc_list_count][3]+";")
             database=table_schema_database_details.iloc[db_sc_list_count][0]
@@ -53,7 +53,6 @@ def table_insert_fun(table_schema_database_details,Target_SF_Account,Source_SF_A
             #column information for schema name
             column_info = connection_source.description
             column_names = [info[0] for info in column_info]
-
             table_value_details=pd.DataFrame(list_table_ddl,columns=column_names)
             table_insert_target_account(database,schema,Target_SF_Account,   table_name,table_value_details)
 
@@ -66,9 +65,9 @@ def table_insert_fun(table_schema_database_details,Target_SF_Account,Source_SF_A
 
 def table_insert_target_account(database_value,schema_value,target_account,table_name,table_dataframe_values):
     try:
-        connection_target_schm=snowflake.connector.connect(user='Sashanth',password='Sash@123',account='dm63557.ap-south-1.aws',warehouse='COMPUTE_WH',database=database_value,schema =schema_value)
-        write_pandas(connection_target_schm,table_dataframe_values,table_name)
+        connection_target_schm=snowflake.connector.connect(user=target_account[0],password=target_account[1],account=target_account[2],warehouse=target_account[3],database=database_value,schema =schema_value)
+        write_pandas(connection_target_schm,table_dataframe_values,table_name,chunk_size=2000,compression="snappy")
         print("value insert into "+ table_name +" on schema "+ schema_value+"  on database "+database_value)
     except  Exception as error:
-        print ("error on insert into table")
+        print ("error on insert into table"+ table_name)
         print(error)

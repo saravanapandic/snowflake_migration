@@ -8,9 +8,10 @@ import pandas  as pd
 
 try:
 # source account details 
-# source_account_details=('DEPLOYMENT','Elait@1234','iy53956.central-india.azure','COMPUTE_WH')
+    #source_account_details=('DEPLOYMENT','Elait@1234','iy53956.central-india.azure','COMPUTE_WH')
     source_account_details=('Govarthanan','Snowflake@777@','mt55505.ap-south-1.aws','COMPUTE_WH')
     target_account_details=('Sashanth','Sash@123','dm63557.ap-south-1.aws','COMPUTE_WH')
+    #target_account_details=('Govarthanan','Snowflake@777@','mt55505.ap-south-1.aws','COMPUTE_WH')
 
     connection_source= conn_sf.connected_sf(source_account_details)
     connection_source.execute("select database_name from SNOWFLAKE.ACCOUNT_USAGE.DATABASES where deleted is null and database_name not in ('SNOWFLAKE_SAMPLE_DATA','SNOWFLAKE')")
@@ -50,7 +51,7 @@ try:
     scc.schema_check(database_in_source,schema_in_source,target_account_details)
     #table create list 
     connection_source= conn_sf.connected_sf(source_account_details)
-    connection_source.execute("select distinct table_schema,table_catalog,table_name from SNOWFLAKE.account_usage.tables where deleted is null and table_schema not in('INFORMATION_SCHEMA','PUBLIC') and table_catalog not in('SNOWFLAKE_SAMPLE_DATA');")
+    connection_source.execute("select distinct table_schema,table_catalog,table_name from SNOWFLAKE.account_usage.tables where deleted is null and table_schema not in('INFORMATION_SCHEMA','PUBLIC') and table_catalog not in('SNOWFLAKE_SAMPLE_DATA')and table_type='BASE TABLE';")
     list_table_on_source = connection_source.fetchall()
     connection_source.close()
 

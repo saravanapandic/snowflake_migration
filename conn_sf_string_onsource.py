@@ -11,8 +11,9 @@ def connected_sf(user_details):
             )
         curs=conn.cursor()
         return curs
-    except :
+    except  Exception as error:
         print('snowflake connected is failed on database')
+        print(error)
 
 # connection with database 
 def connected_database_sf(user_details,database_name):
