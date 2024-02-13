@@ -14,7 +14,7 @@ try:
     #target_account_details=('Govarthanan','Snowflake@777@','mt55505.ap-south-1.aws','COMPUTE_WH')
 
     connection_source= conn_sf.connected_sf(source_account_details)
-    connection_source.execute("select database_name from SNOWFLAKE.ACCOUNT_USAGE.DATABASES where deleted is null and database_name not in ('SNOWFLAKE_SAMPLE_DATA','SNOWFLAKE')")
+    connection_source.execute("select database_name from SNOWFLAKE.ACCOUNT_USAGE.DATABASES where deleted is null and database_name not in ('SNOWFLAKE_SAMPLE_DATA','SNOWFLAKE','HOL_DB')")
     list_values_source_Db = connection_source.fetchall()
     connection_source.close()
     
