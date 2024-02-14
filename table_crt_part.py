@@ -45,7 +45,7 @@ def table_insert_fun(table_schema_database_details,Target_SF_Account,Source_SF_A
         lists=[]
         print("------------------- table value inserting process is going ----------------------------------------------------------------------")
         for db_sc_list_count in range(len(table_schema_database_details)):
-            connection_source.execute("select * from " + table_schema_database_details.iloc[db_sc_list_count][3]+";")
+            connection_source.execute("select * from " + table_schema_database_details.iloc[db_sc_list_count][3]+" limit 3000;")
             database=table_schema_database_details.iloc[db_sc_list_count][0]
             schema=table_schema_database_details.iloc[db_sc_list_count][1]
             table_name=table_schema_database_details.iloc[db_sc_list_count][2]
