@@ -34,6 +34,17 @@ def executed_in_target_sf_table_create(target_account,query_STM,database_name,sc
     finally:
         connection_target_schm.close()
 
+def executed_in_target_sf_procedure(target_account,query_loaded):
+    try:
+        connection_target= conn_sf.connected_sf(target_account)
+        for i in query_loaded:
+            connection_target.execute(i)
+        return 'all database is create successfully'
+    except  Exception as error:
+        print('error on query executed part in target')
+        print(error)
+    finally:
+        connection_target.close()
 
         
     

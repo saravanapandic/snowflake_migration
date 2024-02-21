@@ -9,15 +9,20 @@ import snowflake.connector
 def schema_table_join_Db(db_sc_tb_list,Target_SF_account,source_Sf_account):
     connection_source= conn_sf.connected_sf(source_Sf_account)
     lists=[]
+    count_table_target=0
     for db_sc_list_count in range(len(db_sc_tb_list)):
-        connection_source.execute("select get_ddl('TABLE',"+"'" + db_sc_tb_list.iloc[db_sc_list_count][3]+"');")
-        list_table_ddl = connection_source.fetchall()
-        table_Ddl=pd.DataFrame(list_table_ddl)
-        Qit.executed_in_target_sf_table_create(Target_SF_account,table_Ddl.iloc[0][0],db_sc_tb_list.iloc[db_sc_list_count][0],db_sc_tb_list.iloc[db_sc_list_count][1])
-        print('table:'+ db_sc_tb_list.iloc[db_sc_list_count][2]+' on database: '+ db_sc_tb_list.iloc[db_sc_list_count][0] +' on schema: '+ db_sc_tb_list.iloc[db_sc_list_count][1])
-    print("---------------------------------------all table is create successfully-------------------------------------------------------------------------")
-
-
+        try:
+            connection_source.execute("select get_ddl('TABLE',"+"'" + db_sc_tb_list.iloc[db_sc_list_count][3]+"');")
+            list_table_ddl = connection_source.fetchall()
+            table_Ddl=pd.DataFrame(list_table_ddl)
+            count_table_target +=1
+            Qit.executed_in_target_sf_table_create(Target_SF_account,table_Ddl.iloc[0][0],db_sc_tb_list.iloc[db_sc_list_count][0],db_sc_tb_list.iloc[db_sc_list_count][1])
+            print('table:'+ db_sc_tb_list.iloc[db_sc_list_count][2]+' on database: '+ db_sc_tb_list.iloc[db_sc_list_count][0] +' on schema: '+ db_sc_tb_list.iloc[db_sc_list_count][1])
+        except  Exception as error:
+            print ("error on table create ddl part process")
+            print(error)
+    return count_table_target
+    
 
 def table_crt_list(database_details,schema_table_list,Target_SF_account,source_Sf_account):
     try:
@@ -30,10 +35,16 @@ def table_crt_list(database_details,schema_table_list,Target_SF_account,source_S
                     schema_list.append(schema_table_list.iloc[schema_Db_count][0])
                     database_list.append(schema_table_list.iloc[schema_Db_count][1])
                     table_list.append(schema_table_list.iloc[schema_Db_count][2])
+        count_table_source=len(table_list)
         data = {'database': database_list,'schema': schema_list,'table':table_list}
         data_sc_tb = pd.DataFrame(data)
         data_sc_tb['joined'] = data_sc_tb['database'].astype(str) +'.' + data_sc_tb['schema']+'.'+data_sc_tb['table']
-        schema_table_join_Db(data_sc_tb,Target_SF_account,source_Sf_account)
+        count_table_target=schema_table_join_Db(data_sc_tb,Target_SF_account,source_Sf_account)
+        print("number of table avaiable in source {source_table} and number table load into target is {target_table_count}".format(source_table=count_table_source,target_table_count=count_table_target))
+        if(count_table_source==count_table_target):
+            print("-----------------------------------------all table load successfully to target account-------------------------------------------------------")
+        else:
+            print("-----------------------------------------missing to load some table to target account---------------------------------------------------------")
         table_insert_fun(data_sc_tb,Target_SF_account,source_Sf_account)
     except  Exception as error:
         print ("error on table create  process")
@@ -45,7 +56,7 @@ def table_insert_fun(table_schema_database_details,Target_SF_Account,Source_SF_A
         lists=[]
         print("------------------- table value inserting process is going ----------------------------------------------------------------------")
         for db_sc_list_count in range(len(table_schema_database_details)):
-            connection_source.execute("select * from " + table_schema_database_details.iloc[db_sc_list_count][3]+" limit 3000;")
+            connection_source.execute("select * from " + table_schema_database_details.iloc[db_sc_list_count][3]+";")
             database=table_schema_database_details.iloc[db_sc_list_count][0]
             schema=table_schema_database_details.iloc[db_sc_list_count][1]
             table_name=table_schema_database_details.iloc[db_sc_list_count][2]
